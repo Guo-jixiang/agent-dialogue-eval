@@ -112,6 +112,12 @@ SIM_LLM_MODEL=gpt-4o-mini
 AGENT_LLM_API_KEY=your_key
 AGENT_LLM_BASE_URL=https://api.openai.com/v1
 AGENT_LLM_MODEL=your_model_name
+
+# AI 助手 LLM（内置助手，权限与 eval/sim key 隔离）
+# 留空则自动回退到 EVAL_LLM_*；推荐配独立低成本 key（如 gpt-4o-mini）
+ASSISTANT_LLM_API_KEY=
+ASSISTANT_LLM_BASE_URL=https://api.openai.com/v1
+ASSISTANT_LLM_MODEL=gpt-4o-mini
 ```
 
 ### 方式一：Web 控制台（推荐）
@@ -244,7 +250,9 @@ curl http://localhost:8000/api/eval/reports
 | `EVAL_LLM_*` | - | 评判模型（API Key、Base URL、模型名） |
 | `SIM_LLM_*` | - | 用户模拟模型 |
 | `AGENT_LLM_*` | - | 被测对话模型 |
-| `ASSISTANT_LLM_*` | 回退到 EVAL | 内置 AI 助手模型 |
+| `ASSISTANT_LLM_API_KEY` | 留空回退到 `EVAL_LLM_API_KEY` | 内置 AI 助手 API Key（推荐独立低成本 key） |
+| `ASSISTANT_LLM_BASE_URL` | 留空回退到 `EVAL_LLM_BASE_URL` | 内置 AI 助手 API 地址 |
+| `ASSISTANT_LLM_MODEL` | 留空回退到 `EVAL_LLM_MODEL` | 内置 AI 助手模型名（推荐 gpt-4o-mini） |
 | `MAX_TURNS` | 30 | 最大对话轮次 |
 | `SIM_CONCURRENCY` | 8 | 并发对话模拟数 |
 | `EVAL_CONCURRENCY` | 8 | 并发评测评判数 |

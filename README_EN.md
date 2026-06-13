@@ -108,6 +108,12 @@ SIM_LLM_MODEL=gpt-4o-mini
 AGENT_LLM_API_KEY=your_key
 AGENT_LLM_BASE_URL=https://api.openai.com/v1
 AGENT_LLM_MODEL=your_model_name
+
+# AI Assistant LLM (isolated from eval/sim keys — leave empty to fallback to EVAL_LLM)
+# Recommended: use a lower-cost model (e.g. gpt-4o-mini) for the assistant
+ASSISTANT_LLM_API_KEY=
+ASSISTANT_LLM_BASE_URL=https://api.openai.com/v1
+ASSISTANT_LLM_MODEL=gpt-4o-mini
 ```
 
 ### Option 1: Web Console (Recommended)
@@ -240,7 +246,9 @@ All configuration is via environment variables (`.env` file):
 | `EVAL_LLM_*` | - | Judge panel LLM (API key, base URL, model) |
 | `SIM_LLM_*` | - | User simulation LLM |
 | `AGENT_LLM_*` | - | Agent under test |
-| `ASSISTANT_LLM_*` | Falls back to EVAL | Built-in AI assistant LLM |
+| `ASSISTANT_LLM_API_KEY` | Falls back to `EVAL_LLM_API_KEY` | Built-in AI assistant API key (recommended: independent low-cost key) |
+| `ASSISTANT_LLM_BASE_URL` | Falls back to `EVAL_LLM_BASE_URL` | Built-in AI assistant API base URL |
+| `ASSISTANT_LLM_MODEL` | Falls back to `EVAL_LLM_MODEL` | Built-in AI assistant model (recommended: gpt-4o-mini) |
 | `MAX_TURNS` | 30 | Maximum dialogue turns |
 | `SIM_CONCURRENCY` | 8 | Concurrent dialogue simulations |
 | `EVAL_CONCURRENCY` | 8 | Concurrent evaluations |
