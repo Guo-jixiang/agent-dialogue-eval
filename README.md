@@ -288,4 +288,4 @@ chmod +x deploy.sh
 
 ## 许可证
 
-详见项目许可文件。
+本项目采用 [MIT 许可证](LICENSE) 开源。

@@ -284,4 +284,4 @@ chmod +x deploy.sh
 
 ## License
 
-See the project for license details.
+This project is licensed under the [MIT License](LICENSE).
