@@ -1,0 +1,36 @@
+你是一个对话流程分析专家。请判断外呼专员在以下对话中是否已完成指定的流程节点。
+
+## 待检查的流程节点
+
+{% for node in unchecked_nodes %}
+- [{{ node.id }}] {{ node.description }}
+{% endfor %}
+
+## 最近的对话记录（外呼专员视角）
+
+{% for turn in recent_agent_turns %}
+[第{{ turn.turn_id }}轮] 外呼专员: {{ turn.content }}
+{% endfor %}
+
+## 判定标准
+
+对于每个待检查节点，判断外呼专员是否已经在对话中执行或传达了该节点的核心内容。
+- 即使表达方式不同，只要语义等价即视为"已覆盖"
+- 如果只是间接提及或未充分展开，不算覆盖
+
+## 输出要求
+
+只输出一个JSON对象，字段 covered_node_ids 包含所有已覆盖的节点ID：
+
+```json
+{
+  "covered_node_ids": ["node_2", "node_5"]
+}
+```
+
+如果没有发现新的覆盖节点，返回空数组：
+```json
+{
+  "covered_node_ids": []
+}
+```

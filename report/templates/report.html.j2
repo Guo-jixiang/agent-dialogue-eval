@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>对话模型评测报告</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f5f5; color: #333; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+  h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  h2 { font-size: 18px; font-weight: 600; margin: 24px 0 12px; border-bottom: 2px solid #e0e0e0; padding-bottom: 8px; }
+  h3 { font-size: 15px; font-weight: 600; margin: 16px 0 8px; }
+  .meta { color: #666; font-size: 13px; margin-bottom: 24px; }
+  .score-hero { background: white; border-radius: 12px; padding: 32px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 24px; }
+  .score-number { font-size: 72px; font-weight: 800; line-height: 1; }
+  .score-green { color: #22c55e; }
+  .score-yellow { color: #eab308; }
+  .score-orange { color: #f97316; }
+  .score-red { color: #ef4444; }
+  .score-label { color: #666; font-size: 16px; margin-top: 8px; }
+  .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 16px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: #f8f8f8; text-align: left; padding: 8px 12px; font-weight: 600; border-bottom: 1px solid #e0e0e0; }
+  td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .badge-pass { background: #dcfce7; color: #15803d; }
+  .badge-fail { background: #fee2e2; color: #b91c1c; }
+  .badge-warn { background: #fef9c3; color: #854d0e; }
+  .badge-na { background: #f0f0f0; color: #666; }
+  .dim-bar { height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; margin-top: 4px; }
+  .dim-bar-fill { height: 100%; border-radius: 4px; }
+  .fill-green { background: #22c55e; }
+  .fill-yellow { background: #eab308; }
+  .fill-red { background: #ef4444; }
+  .persona-card { border-left: 4px solid #6366f1; }
+  .failure-list { background: #fff5f5; border: 1px solid #fecaca; border-radius: 8px; padding: 12px 16px; }
+  .failure-list li { font-size: 13px; margin: 4px 0; color: #b91c1c; }
+  .suggestion-list li { font-size: 13px; margin: 6px 0; color: #1e40af; }
+  details summary { cursor: pointer; font-weight: 600; padding: 8px 0; }
+  details[open] summary { margin-bottom: 12px; }
+  .tag { display: inline-block; background: #f0f0f0; border-radius: 4px; padding: 1px 6px; font-size: 11px; margin: 2px; }
+  /* Checkpoint table */
+  .cp-tbl { width:100%; border-collapse:collapse; font-size:12px; margin-bottom:6px; border:1px solid #e5e5e5; border-radius:6px; overflow:hidden; }
+  .cp-tbl th { background:#f8f8f8; font-size:11px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:0.04em; padding:6px 10px; text-align:left; border-bottom:1px solid #e5e5e5; }
+  .cp-tbl td { padding:7px 10px; border-bottom:1px solid #f0f0f0; vertical-align:top; }
+  .cp-tbl tr:last-child td { border-bottom:none; }
+  .cp-fail { background:rgba(239,68,68,0.03); }
+  .cp-pass { background:transparent; }
+  .cp-na   { background:transparent; opacity:0.5; }
+  /* ── Annotated dialogue transcript ── */
+  .transcript { display: flex; flex-direction: column; gap: 4px; }
+  .turn-wrap { display: flex; flex-direction: column; gap: 0; }
+  .turn-bubble { padding: 9px 13px; border-radius: 8px; font-size: 13px; line-height: 1.6; }
+  .turn-agent { background: #eff6ff; border-left: 3px solid #3b82f6; margin-right: 40px; }
+  .turn-user  { background: #f0fdf4; border-left: 3px solid #22c55e; margin-left: 40px; }
+  .turn-meta  { font-size: 11px; color: #888; margin-bottom: 4px; font-weight: 600; }
+  .turn-content { white-space: pre-wrap; word-break: break-all; }
+  /* Annotation chips below agent bubble */
+  .turn-annotations { display: flex; flex-direction: column; gap: 3px; margin: 3px 0 6px 16px; }
+  .ann-chip { display: flex; align-items: flex-start; gap: 6px; padding: 5px 9px;
+              border-radius: 6px; font-size: 11.5px; line-height: 1.45; }
+  .ann-chip-fail { background: #fff1f2; border: 1px solid #fecaca; }
+  .ann-chip-pass { background: #f0fdf4; border: 1px solid #bbf7d0; }
+  .ann-icon { flex-shrink: 0; font-size: 12px; margin-top: 1px; }
+  .ann-body { flex: 1; min-width: 0; }
+  .ann-dim  { display: inline-block; font-size: 10px; font-weight: 700; padding: 0 5px;
+              border-radius: 3px; margin-right: 4px; }
+  .ann-dim-fail { background: #fee2e2; color: #b91c1c; }
+  .ann-dim-pass { background: #dcfce7; color: #15803d; }
+  .ann-score-fail { font-weight: 700; color: #dc2626; }
+  .ann-score-pass { font-weight: 700; color: #16a34a; }
+  .ann-desc { color: #444; }
+  .ann-reason { font-size: 11px; color: #666; margin-top: 2px; line-height: 1.5; }
+  .ann-quote { font-size: 11px; color: #888; font-style: italic; margin-top: 2px;
+               border-left: 2px solid #d1d5db; padding-left: 6px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>对话模型评测报告</h1>
+  <p class="meta">生成时间：{{ generated_at }}</p>
+
+  <!-- Score Hero -->
+  {% set sc = report.overall_score %}
+  {% set score_cls = "score-green" if sc >= 90 else ("score-yellow" if sc >= 75 else ("score-orange" if sc >= 60 else "score-red")) %}
+  <div class="score-hero">
+    <div class="score-number {{ score_cls }}">{{ "%.1f"|format(sc) }}</div>
+    <div class="score-label">综合得分（满分100）</div>
+    <div style="margin-top:12px; font-size:13px; color:#666;">
+      评测对话 {{ report.dialogue_reports|length }} 个 ·
+      关键失败 {{ report.critical_failures|length }} 项 ·
+      硬约束违规 {% if report.dialogue_reports|selectattr('hard_constraint_failed')|list %}<span style="color:#ef4444">是</span>{% else %}<span style="color:#22c55e">否</span>{% endif %}
+    </div>
+  </div>
+
+  <!-- Dimension Scores -->
+  <h2>维度得分</h2>
+  <div class="card">
+    <table>
+      <tr><th>维度</th><th>得分</th><th>进度</th></tr>
+      {% for dim, score in report.score_by_dimension.items() %}
+      {% set fill_cls = "fill-green" if score >= 0.8 else ("fill-yellow" if score >= 0.6 else "fill-red") %}
+      <tr>
+        <td>{{ dim }}</td>
+        <td><strong>{{ "%.0f"|format(score * 100) }}%</strong></td>
+        <td style="width:40%">
+          <div class="dim-bar"><div class="dim-bar-fill {{ fill_cls }}" style="width:{{ "%.0f"|format(score * 100) }}%"></div></div>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <!-- Anomaly Detection -->
+  {% set all_anomaly_flags = [] %}
+  {% for dr in report.dialogue_reports %}
+    {% for af in dr.anomaly_flags %}
+      {% if af not in all_anomaly_flags %}
+        {% set _ = all_anomaly_flags.append(af) %}
+      {% endif %}
+    {% endfor %}
+  {% endfor %}
+  {% if all_anomaly_flags %}
+  <h2>异常检测</h2>
+  <div class="card" style="border-left: 4px solid #f97316;">
+    <ul style="list-style:none; padding:0;">
+      {% for flag in all_anomaly_flags %}
+      <li style="font-size:13px; margin:4px 0;">⚠️ {{ flag }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <!-- Critical Failures -->
+  {% if report.critical_failures %}
+  <h2>关键问题</h2>
+  <div class="failure-list">
+    <ul style="list-style:none; padding:0;">
+      {% for f in report.critical_failures %}
+      <li>⚠️ {{ f }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <!-- Per Persona -->
+  <h2>各用户类型详情</h2>
+  {% for dr in report.dialogue_reports %}
+  {% set psc = dr.overall_score %}
+  {% set p_cls = "score-green" if psc >= 90 else ("score-yellow" if psc >= 75 else ("score-orange" if psc >= 60 else "score-red")) %}
+  <div class="card persona-card">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3>{{ dr.persona_archetype.value }} 型用户</h3>
+      <span class="score-number {{ p_cls }}" style="font-size:32px;">{{ "%.1f"|format(psc) }}</span>
+    </div>
+    <div style="margin: 8px 0; font-size:13px;">
+      {% if dr.hard_constraint_failed %}<span class="badge badge-fail">硬约束违规</span>{% endif %}
+      {% for s in dr.strengths %}<span class="tag">✅ {{ s }}</span>{% endfor %}
+      {% for w in dr.weaknesses %}<span class="tag" style="background:#fee2e2; color:#b91c1c;">❌ {{ w }}</span>{% endfor %}
+    </div>
+
+    {% if dr.critical_failures %}
+    <ul style="font-size:13px; color:#b91c1c; margin: 8px 0 0 16px;">
+      {% for f in dr.critical_failures %}<li>{{ f }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+
+    <!-- Checkpoint detail (table) -->
+    <details style="margin-top:12px;">
+      <summary>检查点明细</summary>
+      {% for ds in dr.dimension_scores %}
+      {% if ds.checkpoint_results %}
+      <div style="margin:10px 0 4px;display:flex;align-items:center;gap:8px;">
+        {% set dim_color = {'flow':'#a78bfa','constraint':'#fbbf24','knowledge':'#34d399','style':'#60a5fa','coherence':'#f472b6','safety':'#f87171','adaptability':'#2dd4bf'} %}
+        {% set dc = dim_color.get(ds.dimension.value, '#888') %}
+        <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;background:{{ dc }}22;color:{{ dc }};border:1px solid {{ dc }}44;">{{ ds.dimension.value }}</span>
+        <span style="font-size:12px;font-weight:700;color:{{ 'var(--success)' if ds.score >= 0.8 else ('orange' if ds.score >= 0.6 else 'var(--danger)') }};">{{ "%.0f"|format(ds.score * 100) }}%</span>
+      </div>
+      <table class="cp-tbl">
+        <thead><tr><th>状态</th><th>检查点描述</th><th>得分</th><th>置信度</th><th>说明 / 依据</th></tr></thead>
+        <tbody>
+        {% for cr in ds.checkpoint_results %}
+        {% set is_na = cr.explanation is defined and cr.explanation is not none and cr.explanation.startswith("[未触发]") %}
+        <tr class="{{ 'cp-na' if is_na else ('cp-pass' if cr.passed else 'cp-fail') }}">
+          <td style="text-align:center;">
+            {% if is_na %}<span style="color:#aaa;">—</span>
+            {% elif cr.passed %}<span class="badge badge-pass">通过</span>
+            {% else %}<span class="badge badge-fail">失败</span>{% endif %}
+          </td>
+          <td>{{ cr.checkpoint.description }}</td>
+          <td style="text-align:center;">{{ "—" if is_na else ("%.0f"|format(cr.score * 100) + "%") }}</td>
+          <td style="text-align:center;">{{ "—" if is_na else ("%.0f"|format(cr.confidence * 100) + "%") }}</td>
+          <td style="font-size:12px;color:#555;">
+            {% if is_na %}—
+            {% elif cr.explanation and not cr.explanation.startswith("[未触发]") %}{{ cr.explanation[:150] }}
+            {% endif %}
+          </td>
+        </tr>
+        {% if cr.validation_warnings %}
+          {% for w in cr.validation_warnings %}
+          <tr><td><span class="badge badge-warn">警告</span></td><td colspan="4" style="color:#854d0e;font-size:12px;">{{ w }}</td></tr>
+          {% endfor %}
+        {% endif %}
+        {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% endfor %}
+    </details>
+
+    <!-- Annotated dialogue transcript (failures only) -->
+    {% set dialogue = dialogues_map[dr.dialogue_id] %}
+    {% if dialogue %}
+    {# Build turn_id → FAILED annotations map only #}
+    {% set ns = namespace(ta={}) %}
+    {% for ds in dr.dimension_scores %}
+      {% for cr in ds.checkpoint_results %}
+        {% set is_na = cr.explanation is defined and cr.explanation is not none and cr.explanation.startswith("[未触发]") %}
+        {% if not is_na and not cr.passed and cr.evidence and cr.evidence.turn_ids %}
+          {% for tid in cr.evidence.turn_ids %}
+            {% if tid not in ns.ta %}{% set _ = ns.ta.update({tid: []}) %}{% endif %}
+            {% set _ = ns.ta[tid].append({
+              'dim': ds.dimension.value,
+              'desc': cr.checkpoint.description,
+              'score': cr.score,
+              'reason': cr.explanation
+            }) %}
+          {% endfor %}
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+    <details style="margin-top:12px;">
+      <summary>对话原文（{{ dialogue.turns|length }} 轮 · 失败项逐轮标注）</summary>
+      <div class="transcript" style="margin-top:10px;">
+      {% for turn in dialogue.turns %}
+      <div class="turn-wrap">
+        <div class="turn-bubble {{ 'turn-agent' if turn.role == 'agent' else 'turn-user' }}">
+          <div class="turn-meta">
+            {% if turn.role == 'agent' %}🤖 专员 · 第{{ turn.turn_id }}轮 · {{ turn.char_count }}字
+            {% else %}👤 用户 · 第{{ turn.turn_id }}轮{% endif %}
+          </div>
+          <div class="turn-content">{{ turn.content }}</div>
+        </div>
+        {# Only show failed annotations under agent turns #}
+        {% if turn.role == 'agent' and turn.turn_id in ns.ta %}
+        <div class="turn-annotations">
+          {% for ann in ns.ta[turn.turn_id] %}
+          <div class="ann-chip ann-chip-fail">
+            <span class="ann-icon">❌</span>
+            <div class="ann-body">
+              <span class="ann-dim ann-dim-fail">{{ ann.dim }}</span>
+              <span class="ann-desc">{{ ann.desc[:80] }}</span>
+              <span class="ann-score-fail">→ {{ "%.0f"|format(ann.score * 100) }}%</span>
+              {% if ann.reason and not ann.reason.startswith("[未触发]") %}
+              <div class="ann-reason">↳ {{ ann.reason[:180] }}</div>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  <!-- Suggestions -->
+  <h2>改进建议</h2>
+  <div class="card">
+    <ul class="suggestion-list" style="list-style:none; padding:0;">
+      {% for s in report.improvement_suggestions %}
+      <li>{{ loop.index }}. {{ s }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

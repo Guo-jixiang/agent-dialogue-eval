@@ -1,0 +1,37 @@
+你是一个评测结果裁判专家。以下是 {{ total }} 个对话的评测摘要，请进行全局分析。
+
+## 各对话摘要
+{% for d in dialogues %}
+### {{ d.persona_label }}
+- 总分：{{ d.overall_score }}
+- 成功：{{ "是" if d.success else "否" }}
+- 优点：{{ d.strengths | join("、") }}
+- 缺点：{{ d.weaknesses | join("、") }}
+{% endfor %}
+
+## 维度平均分
+{% for dim, score in dimension_scores.items() %}
+- {{ dim }}：{{ score }}
+{% endfor %}
+
+## 分析要求
+请输出 JSON：
+{
+  "top5": [
+    {"rank": 1, "persona_label": "...", "score": 0, "key_reason": "一句话原因"}
+  ],
+  "bottom5": [
+    {"rank": 1, "persona_label": "...", "score": 0, "key_reason": "一句话原因"}
+  ],
+  "common_issues": [
+    {"issue": "问题名称", "count": 出现次数, "examples": ["示例标签1", "示例标签2"]}
+  ],
+  "dimension_summary": {
+    "flow": {"avg": 0, "note": "一句话总结"},
+    "constraint": {"avg": 0, "note": "一句话总结"},
+    ...
+  }
+}
+
+common_issues 请归纳 3-6 个最常见的共性问题，按出现次数降序排列。
+只返回 JSON，不要加任何说明。

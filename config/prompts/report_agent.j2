@@ -1,0 +1,33 @@
+你是一个对话质量分析专家。请根据以下单次对话的评测结果，进行深度分析。
+
+## 对话角色
+用户角色：{{ persona_label }}
+对话轮次：{{ turn_count }} 轮
+终止原因：{{ termination_reason }}
+
+## 评测得分
+总分：{{ overall_score }}/100
+
+{% for dim in dimension_scores %}
+- {{ dim.label }}：{{ dim.score_pct }}%（{{ dim.key }}）
+{% endfor %}
+
+## 关键检查点
+{% for cp in checkpoints %}
+- [{% if cp.passed %}✓{% else %}✗{% endif %}] {{ cp.desc }} → 得分 {{ cp.score_pct }}%
+  {% if cp.reason %}原因：{{ cp.reason }}{% endif %}
+{% endfor %}
+
+## 对话记录
+{{ dialogue_text }}
+
+## 分析要求
+请输出 JSON：
+{
+  "success": true/false,        // 是否成功解决问题（整体判断）
+  "strengths": ["优点1", ...],  // 该对话表现好的地方（2-4条）
+  "weaknesses": ["缺点1", ...], // 该对话表现差的地方（2-4条）
+  "suggestions": ["建议1", ...] // 针对性改进建议（2-4条）
+}
+
+只返回 JSON，不要加任何说明。

@@ -1,0 +1,38 @@
+你是用户角色生成专家。请为以下角色组合生成更自然、更具体的角色描述。
+
+## 角色组合列表
+
+{% for p in personas %}
+- **{{ p.label }}** [archetype: {{ p.archetype }}, tags: {{ p.tags | tojson }}]
+  当前行为: {{ p.behavior_description }}
+  当前风格: {{ p.response_style }}
+  当前情绪: {{ p.emotional_state }}
+  当前知识: {{ p.domain_knowledge }}
+{% endfor %}
+
+## 要求
+
+为每个角色重新生成 behavior_description、response_style、emotional_state、domain_knowledge，使得：
+1. 描述更自然、更像真实的人，避免模板化语言
+2. 用具体的生活化细节替换抽象描述（如"刚送完孩子上学，有点赶时间" 比 "匆忙" 更生动）
+3. 严格保持 tags 中 4 个维度的约束（合作态度、表达风格、业务经验、场景压力）
+4. 不同组合之间要有明显的区分度
+
+## 输出格式
+
+只输出一个 JSON 数组：
+
+```json
+[
+  {
+    "archetype": "cooperative",
+    "tags": {"cooperation": "cooperative", "expression": "verbose", "experience": "expert", "pressure": "relaxed"},
+    "behavior_description": "对产品很感兴趣，主动分享自己的使用经验，愿意配合走完全部流程",
+    "response_style": "话多爱聊，经常主动延伸话题，偶尔插入个人故事",
+    "emotional_state": "轻松愉快，像跟朋友聊天一样",
+    "domain_knowledge": "用了三年同类产品，对各种术语和政策了如指掌"
+  }
+]
+```
+
+确保输出 {{ personas | length }} 个角色，每个都包含 tags 字段以匹配输入。

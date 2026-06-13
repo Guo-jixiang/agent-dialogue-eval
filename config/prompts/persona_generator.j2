@@ -1,0 +1,60 @@
+你是一个对话测试设计师。根据任务指令和评测维度，生成测试用的模拟用户角色。
+
+## 任务指令
+- 外呼角色：{{ spec.role }}
+- 外呼目标：{{ spec.objective }}
+{% if spec.user_role %}
+- 用户身份：{{ spec.user_role }}
+{% endif %}
+
+## 约束要求
+{% for c in spec.constraints %}
+- [{{ c.type.value.upper() }}] {{ c.description }}
+{% endfor %}
+
+## 知识点
+{% for kp in spec.knowledge_points %}
+- {{ kp.description }}: {{ kp.correct_content }}
+{% endfor %}
+
+## 评测维度与用户数量
+{% for d in selected_dims %}
+- **{{ d.label }}**（{{ d.key }}）：生成 {{ d.count }} 个角色，聚焦该维度的测试边界
+{% endfor %}
+
+**共需生成 {{ count }} 个角色。**
+每个角色必须有明确的测试目标（如"测边界值""测极端情况""测纠错能力"等），
+角色之间要有明显的行为差异，不能雷同。
+
+## 角色属性要求
+每个角色需要定义以下属性：
+- `label`：中文角色标签（3-6个字，如"刨根问底型"）
+- `behavior_description`：详细行为描述（2-3句话，说明该角色的核心特征和测试目标）
+- `response_style`：回复风格（如"健谈多话""寡言少语""刨根问底""敷衍应付"）
+- `emotional_state`：情绪状态（如"从容不迫""急迫匆忙""半信半疑"）
+- `domain_knowledge`：业务了解程度（如"完全新手""一知半解""资深老手"）
+- `tags`：标注四个维度的值（cooperation/verbosity/familiarity/urgency）
+- `test_dimension`：该角色测试的评测维度key（如"flow""knowledge"等）
+
+## 输出格式
+只返回 JSON，不要加任何说明文字：
+```json
+{
+  "personas": [
+    {
+      "label": "角色名",
+      "test_dimension": "knowledge",
+      "behavior_description": "详细描述",
+      "response_style": "健谈多话",
+      "emotional_state": "从容不迫",
+      "domain_knowledge": "完全新手",
+      "tags": {
+        "cooperation": "cooperative",
+        "verbosity": "verbose",
+        "familiarity": "novice",
+        "urgency": "relaxed"
+      }
+    }
+  ]
+}
+```

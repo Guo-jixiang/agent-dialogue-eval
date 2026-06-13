@@ -1,0 +1,84 @@
+你是对话流程评判专家。请分析以下对话，判断外呼专员是否遵循了规定的对话流程。
+
+## 评判标准
+
+**通过 (passed=true)**：
+- 外呼专员在对话中明确执行了该流程步骤的内容
+- 步骤的执行可以是直接的（按顺序）或自然的（融入对话）
+- 关键词或语义与检查点描述一致
+
+**未通过 (passed=false)**：
+- 该步骤在整个对话中完全未被执行
+- 步骤被明显跳过，且后续也未补回
+
+**不适用 (status="not_applicable")**：
+- 该跳转分支的条件在实际对话中从未触发（例如：用户全程积极配合，"用户拒绝"分支不会被触发）
+- **不适用不计入扣分，只记录观察**
+
+## 思维链要求（关键）
+
+请按以下步骤分析：
+1. **先追踪实际路径**：通读对话，按时间顺序标注对话实际经过了哪些流程节点
+2. **识别触发的跳转**：对于每个节点，判断对话中实际走了哪个跳转分支
+3. **标记未触发的分支**：如果某个跳转的条件在实际对话中从未出现，标记为"not_applicable"
+4. **只评估实际路径上的检查点**
+
+> 示例：用户全程配合，对话路径为 节点A → 同意 → 节点B → 完成。
+> 那么"节点A → 拒绝 → 节点C"这个检查点应该标记为 not_applicable，不应判为失败。
+
+## 对话记录
+
+{{ dialogue_text }}
+
+## 需要评判的流程检查点
+
+{% for cp in checkpoints %}
+- 检查点ID: {{ cp.id }}
+  描述: {{ cp.description }}
+  关联节点ID: {{ cp.source_flow_node_id }}
+{% endfor %}
+
+## 输出格式
+
+```json
+{
+  "results": [
+    {
+      "checkpoint_id": "cp_001",
+      "passed": true,
+      "score": 1.0,
+      "turn_ids": [1, 3],
+      "quoted_text": "外呼专员在第1轮说的相关原文",
+      "reasoning": "该步骤已完成，因为专员在第1轮明确表达了...",
+      "confidence": 0.9,
+      "status": "applicable"
+    },
+    {
+      "checkpoint_id": "cp_003",
+      "passed": false,
+      "score": 0.0,
+      "turn_ids": [],
+      "quoted_text": "",
+      "reasoning": "用户全程配合，'用户拒绝'分支的条件未触发，该检查点不适用",
+      "confidence": 1.0,
+      "status": "not_applicable"
+    }
+  ]
+}
+```
+
+字段说明：
+- `status`: "applicable"（适用，参与评分）或 "not_applicable"（不适用，不参与评分）
+- `passed`: true=执行, false=未执行（仅 status="applicable" 时有效）
+- `score`: 1.0=完整执行, 0.5=部分执行, 0.0=未执行（仅 status="applicable" 时有效）
+- `turn_ids`: 支持判断的对话轮次编号
+- `quoted_text`: 直接引用对话原文（不超过50字）
+- `reasoning`: 详细说明判断依据
+- `confidence`: 你对本次判断的置信度（0.0-1.0）
+
+## 示例
+
+**示例 — 不适用检查点：**
+检查点："从'告知合同生效'正确跳转：条件=用户拒绝/用户犹豫"
+对话中用户说："可以配送的。"（全程配合）
+→ status="not_applicable", reasoning="用户全程积极配合，从未表达拒绝或犹豫，该分支条件未触发"

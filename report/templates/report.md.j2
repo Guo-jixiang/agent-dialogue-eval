@@ -1,0 +1,254 @@
+{% set ss = report.structured_summary %}
+{% set score = report.overall_score | round(1) %}
+{% set grade = ss.overall_grade if ss else ("优秀" if score >= 90 else ("良好" if score >= 75 else ("及格" if score >= 60 else "不及格"))) %}
+{% set deploy = ss.deploy_advice if ss else "请参考各维度得分决策" %}
+
+# 对话数字人评测报告
+
+> 评测时间：{{ generated_at }}　·　报告 ID：{{ report.id }}
+
+---
+
+## 一、决策层摘要
+
+### 综合评分：{{ "%.1f"|format(score) }} / 100　{{ "🟢" if score >= 90 else ("🟡" if score >= 75 else ("🟠" if score >= 60 else "🔴")) }}　**{{ grade }}**
+
+**上线建议**：{{ deploy }}
+
+{% if ss %}
+### 核心结论
+
+{{ ss.core_conclusion.strengths }}
+
+{{ ss.core_conclusion.top_weakness }}
+
+{{ ss.core_conclusion.top_priority }}
+
+{% else %}
+### 核心结论
+
+{% set strengths_dims = [] %}
+{% set weak_dims = [] %}
+{% for dim, s in report.score_by_dimension.items() %}
+{% if s >= 0.8 %}{% set _ = strengths_dims.append(dim) %}{% endif %}
+{% if s < 0.6 %}{% set _ = weak_dims.append(dim) %}{% endif %}
+{% endfor %}
+✅ 强项维度：{{ strengths_dims | join("、") if strengths_dims else "暂无" }}
+
+❌ 薄弱维度：{{ weak_dims | join("、") if weak_dims else "暂无" }}
+{% endif %}
+
+### 各维度得分
+
+| 维度 | 得分 | 评级 |
+|------|------|------|
+{% if ss %}
+{% for d in ss.dim_summary | sort(attribute='score_pct') %}
+| {{ d.label }} | {{ d.score_pct }}% | {{ d.grade }} |
+{% endfor %}
+{% else %}
+{% for dim, s in report.score_by_dimension.items() %}
+{% set pct = (s * 100) | round | int %}
+| {{ dim }} | {{ pct }}% | {{ "优秀" if pct >= 90 else ("良好" if pct >= 75 else ("及格" if pct >= 60 else "不及格")) }} |
+{% endfor %}
+{% endif %}
+
+---
+
+## 二、问题归因与改进建议
+
+{% if ss and ss.grouped_issues %}
+
+{% set critical_issues = ss.grouped_issues | selectattr('severity', 'equalto', 'critical') | list %}
+{% set warning_issues = ss.grouped_issues | selectattr('severity', 'equalto', 'warning') | list %}
+{% set info_issues = ss.grouped_issues | selectattr('severity', 'equalto', 'info') | list %}
+{% set ok_dims = ss.dim_summary | selectattr('score_pct', 'ge', 80) | list %}
+
+{% if critical_issues %}
+### 🔴 必须修复（硬约束 / 高频失败）
+
+{% for issue in critical_issues %}
+**{{ loop.index }}. {{ issue.title[:60] }}**
+
+- 出现频率：{{ issue.frequency }}{% if issue.is_hard %}　⚠️ 硬约束违规{% endif %}
+- 所属维度：{{ issue.dim }}
+{% if issue.example %}
+- 典型案例：「{{ issue.example }}」
+{% endif %}
+- 改进建议：{{ issue.suggestion }}
+
+{% endfor %}
+{% endif %}
+
+{% if warning_issues %}
+### 🟡 建议优化（中优先级）
+
+{% for issue in warning_issues %}
+**{{ loop.index }}. {{ issue.title[:60] }}**
+
+- 出现频率：{{ issue.frequency }}　所属维度：{{ issue.dim }}
+{% if issue.example %}
+- 典型案例：「{{ issue.example }}」
+{% endif %}
+- 改进建议：{{ issue.suggestion }}
+
+{% endfor %}
+{% endif %}
+
+{% if info_issues %}
+### 🔵 偶发问题（低优先级）
+
+{% for issue in info_issues %}
+- **{{ issue.title[:60] }}**（{{ issue.frequency }}，{{ issue.dim }}）：{{ issue.suggestion }}
+{% endfor %}
+
+{% endif %}
+
+{% if ok_dims %}
+### ✅ 表现良好（可作为正向参考）
+
+{% for d in ok_dims %}
+- **{{ d.label }}**（{{ d.score_pct }}%）：该维度表现稳定，可保持现有策略
+{% endfor %}
+
+{% endif %}
+
+{% else %}
+### 改进建议
+
+{% for s in report.improvement_suggestions %}
+{{ loop.index }}. {{ s }}
+{% endfor %}
+{% endif %}
+
+---
+
+## 三、分对话明细（按得分升序）
+
+{% if ss %}
+{% for p in ss.persona_summary %}
+### {{ loop.index }}. {{ p.label }}　{{ "%.1f"|format(p.score) }} 分　{{ p.grade }}{% if p.hard_failed %}　⚠️ 硬约束违规{% endif %}
+
+{% if p.key_issues %}
+**问题**：
+{% for issue in p.key_issues %}
+- {{ issue }}
+{% endfor %}
+{% endif %}
+{% if p.strengths %}
+**亮点**：{{ p.strengths | join("；") }}
+{% endif %}
+{% if p.suggestions %}
+**建议**：
+{% for s in p.suggestions %}
+- {{ s }}
+{% endfor %}
+{% endif %}
+
+**检查点明细**：
+
+{% set outer_loop = loop %}
+{% for dr in report.dialogue_reports %}
+{% if dr.persona_label == p.label %}
+{% for ds in dr.dimension_scores %}
+{% if ds.checkpoint_results %}
+*{{ ds.dimension.value }} 维度（{{ "%.0f"|format(ds.score * 100) }}%）*
+
+| 状态 | 检查点描述 | 得分 | 置信度 | 说明 / 依据 |
+|:---:|--------|:---:|:---:|------|
+{% for cr in ds.checkpoint_results %}
+{% set is_na = cr.explanation is defined and cr.explanation is not none and cr.explanation.startswith("[未触发]") %}
+| {{ "—" if is_na else ("✅" if cr.passed else "❌") }} | {{ cr.checkpoint.description[:60] }} | {{ "—" if is_na else ("%.0f"|format(cr.score * 100) + "%") }} | {{ "—" if is_na else ("%.0f"|format(cr.confidence * 100) + "%") }} | {{ "—" if is_na else (cr.explanation[:100] if cr.explanation and not cr.explanation.startswith("[未触发]") else "—") }} |
+{% endfor %}
+
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+
+---
+{% endfor %}
+
+{% else %}
+{% for dr in report.dialogue_reports %}
+### {{ dr.persona_archetype.value }} 型用户　{{ "%.1f"|format(dr.overall_score) }} 分{% if dr.hard_constraint_failed %}　⚠️ 硬约束违规{% endif %}
+
+{% if dr.critical_failures %}
+**关键失败**：
+{% for f in dr.critical_failures %}
+- {{ f }}
+{% endfor %}
+{% endif %}
+
+{% for ds in dr.dimension_scores %}
+{% if ds.checkpoint_results %}
+*{{ ds.dimension.value }} 维度（{{ "%.0f"|format(ds.score * 100) }}%）*
+
+| 状态 | 检查点描述 | 得分 | 置信度 | 说明 / 依据 |
+|:---:|--------|:---:|:---:|------|
+{% for cr in ds.checkpoint_results %}
+{% set is_na = cr.explanation is defined and cr.explanation is not none and cr.explanation.startswith("[未触发]") %}
+| {{ "—" if is_na else ("✅" if cr.passed else "❌") }} | {{ cr.checkpoint.description[:60] }} | {{ "—" if is_na else ("%.0f"|format(cr.score * 100) + "%") }} | {{ "—" if is_na else ("%.0f"|format(cr.confidence * 100) + "%") }} | {{ "—" if is_na else (cr.explanation[:100] if cr.explanation and not cr.explanation.startswith("[未触发]") else "—") }} |
+{% endfor %}
+
+{% endif %}
+{% endfor %}
+---
+{% endfor %}
+{% endif %}
+
+## 附录：带评分标注的原始对话
+
+> 每轮 Agent 回复后，❌ 标注该轮违规/失败的检查点及扣分原因；无标注表示该轮全部通过。
+
+{% for dr in report.dialogue_reports %}
+### 对话 {{ loop.index }}／{{ report.dialogue_reports|length }}　{{ dr.persona_label if dr.persona_label else dr.persona_archetype.value }}　{{ "%.1f"|format(dr.overall_score) }} 分{% if dr.hard_constraint_failed %}　⚠️ 硬约束违规{% endif %}
+
+{% set dialogue = dialogues_map[dr.dialogue_id] %}
+{% if dialogue %}
+
+{# ── 构建 turn_id → 失败检查点 的映射 ── #}
+{% set ns = namespace(turn_annotations={}) %}
+{% for ds in dr.dimension_scores %}
+  {% for cr in ds.checkpoint_results %}
+    {% set is_na = cr.explanation is defined and cr.explanation is not none and cr.explanation.startswith("[未触发]") %}
+    {% if not is_na and not cr.passed and cr.evidence and cr.evidence.turn_ids %}
+      {% for tid in cr.evidence.turn_ids %}
+        {% if tid not in ns.turn_annotations %}
+          {% set _ = ns.turn_annotations.update({tid: []}) %}
+        {% endif %}
+        {% set _ = ns.turn_annotations[tid].append({
+            'dim': ds.dimension.value,
+            'desc': cr.checkpoint.description,
+            'score': cr.score,
+            'reason': cr.explanation
+          }) %}
+      {% endfor %}
+    {% endif %}
+  {% endfor %}
+{% endfor %}
+
+{% for turn in dialogue.turns %}
+{% if turn.role == 'user' %}
+> **👤 用户 [第{{ turn.turn_id }}轮]**：{{ turn.content }}
+
+{% else %}
+**🤖 专员 [第{{ turn.turn_id }}轮]**（{{ turn.char_count }}字）：{{ turn.content }}
+
+{% if turn.turn_id in ns.turn_annotations %}
+{% for ann in ns.turn_annotations[turn.turn_id] %}
+> ❌ **[{{ ann.dim }}]** {{ ann.desc[:70] }}　→ **{{ "%.0f"|format(ann.score * 100) }}%**
+{% if ann.reason and not ann.reason.startswith("[未触发]") %}
+> 　　↳ {{ ann.reason[:150] }}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{% endif %}
+{% endfor %}
+
+*终止：{{ dialogue.termination_reason.value }}*
+
+{% endif %}
+---
+{% endfor %}

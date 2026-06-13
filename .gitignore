@@ -1,0 +1,14 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+reports/
+.claude/
+web/node_modules/
+.pytest_cache/
+*.egg-info/
+# dist/ — but keep web/dist (pre-built frontend for deployment)
+# web/dist is intentionally committed so Railway can deploy without Node.js
+.venv/
+venv/
