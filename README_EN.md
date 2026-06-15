@@ -2,6 +2,28 @@
 
 PromptScope is an automated evaluation platform for conversational AI products. It simulates real user interactions with your dialogue model across diverse personas, then scores the model on 7 dimensions using a panel of LLM judges, producing quantifiable, traceable, and comparable evaluation reports.
 
+## Resume-Ready Summary (Copy/Paste)
+
+### One-line Project Pitch
+
+An automated evaluation platform for conversational AI that combines multi-persona dialogue simulation with multi-dimensional LLM judging to produce quantifiable and traceable quality reports.
+
+### What You Built (edit to match your role)
+
+- Designed and implemented an end-to-end evaluation pipeline: instruction parsing → persona generation → dialogue simulation → multi-dimensional judging → root-cause attribution
+- Built a production-style toolkit with CLI, FastAPI backend, and Vue web console for different usage scenarios
+- Added self-consistency judging, anomaly detection, and evidence citation to improve result stability and explainability
+
+### Tech Stack Keywords
+
+`Python` `FastAPI` `Pydantic` `OpenAI Compatible API` `Jinja2` `Vue.js` `SSE` `Pytest` `Docker`
+
+### Quantifiable Highlights
+
+- Persona system covers 4 user-behavior dimensions with up to 72 scenario combinations
+- 7 independent evaluation dimensions plus hard-constraint penalty for unified scoring and fair comparison
+- Report outputs in HTML / Markdown / JSON for auditability, sharing, and team retrospectives
+
 ## Features
 
 - **Automatic Dialogue Simulation** - 4-dimension persona system (cooperation, verbosity, familiarity, urgency) generating up to 72 unique user behavior combinations
